@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>星際數學挑戰 🚀</title>
+<!-- 🌟 引入 Supabase 官方極速實時 SDK 🌟 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+    :root { --primary: #4A90E2; --success: #2ECC71; --danger: #E74C3C; --warning: #F1C40F; --dark: #2C3E50; --light: #ECF0F1; }
+    body {
+        margin: 0; padding: 0; font-family: "PingFang HK", "Microsoft JhengHei", sans-serif;
+        background-color: #1a1a2e; color: white; display: flex; flex-direction: column;
+        min-height: 100vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    }
+    
+    .header {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 10px 15px; background: rgba(0,0,0,0.5); font-size: 20px; font-weight: bold; flex-shrink: 0;
+    }
+    .player-info { color: var(--success); }
+    
+    .btn-home {
+        background: transparent; border: 1px solid rgba(255,255,255,0.3); color: #ccc;
+        font-size: 14px; padding: 4px 10px; border-radius: 8px; cursor: pointer; transition: 0.2s;
+    }
+    .btn-home:hover { background: rgba(255,255,255,0.1); color: white; }
+    
+    .game-container {
+        flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; 
+        padding: 10px; box-sizing: border-box; width: 100%;
+    }
+    
+    #login-screen {
+        background: var(--light); color: var(--dark); padding: 15px 20px; border-radius: 20px;
+        max-width: 650px; width: 95%; box-shadow: 0 8px 20px rgba(0,0,0,0.4); text-align: center;
+        box-sizing: border-box; margin: auto; max-height: 95vh; overflow-y: auto;
+    }
+    .login-title { font-size: 28px; margin: 0 0 10px 0; color: var(--primary); }
+    
+    .rules-box {
+        background: #fff8e1; border: 3px dashed var(--warning); border-radius: 12px;
+        padding: 8px 12px; text-align: left; margin-bottom: 15px; font-size: 15px; line-height: 1.4; color: #555;
+    }
+    .rules-box h3 { margin: 0 0 5px 0; font-size: 18px; color: var(--danger); text-align: center; }
+    .rules-box p { margin: 0; }
+    
+    .login-inputs { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
+    .login-select {
+        font-size: 16px; padding: 6px 10px; border-radius: 8px; border: 2px solid var(--primary);
+        font-weight: bold; outline: none; background: white; cursor: pointer;
+    }
+    
+    .mini-leaderboard { margin-top: 15px; border-top: 2px solid #ccc; padding-top: 10px; }
+    .mini-leaderboard h3 { font-size: 16px; color: var(--danger); margin: 0 0 5px 0; }
+    .mini-table { width: 100%; border-collapse: collapse; font-size: 14px; background: white; }
+    .mini-table th { background: var(--primary); color: white; padding: 4px; }
+    .mini-table td { padding: 4px; border: 1px solid #eee; }
+    .mini-table tr:nth-child(even) { background-color: #f9f9f9; }
+    
+    .question-box {
+        background: var(--light); color: var(--dark); padding: 20px 30px; border-radius: 20px;
+        max-width: 800px; width: 95%; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; text-align: center; box-sizing: border-box;
+    }
+    .q-intro { font-size: 30px; font-weight: bold; color: var(--dark); }
+    .q-compare {
+        font-size: 30px; font-weight: bold; background-color: rgba(241, 196, 15, 0.25);
+        padding: 6px 16px; border-radius: 10px; border: 2px dashed rgba(241, 196, 15, 0.5);
+        display: inline-block; align-self: center;
+    }
+    .q-target {
+        font-size: 30px; font-weight: bold; color: var(--dark);
+        background-color: #e8f4fd; border: 3px solid var(--primary);
+        padding: 6px 16px; border-radius: 10px; display: inline-block; align-self: center;
+    }
+    .equation-area {
+        display: flex; justify-content: center; align-items: center; gap: 15px;
+        font-size: 42px; font-weight: bold; margin-bottom: 20px;
+    }
+    .eq-box { background: white; color: var(--dark); border-radius: 12px; padding: 6px 18px; min-width: 50px; text-align: center; }
+    .eq-circle {
+        width: 65px; height: 65px; border-radius: 50%; border: 4px dashed var(--warning);
+        background: rgba(255, 255, 255, 0.1); color: var(--warning); display: flex;
+        align-items: center; justify-content: center; font-size: 42px; transition: all 0.3s;
+    }
+    .eq-circle.filled { border: 4px solid white; background: var(--dark); color: white; }
+    .eq-circle.correct { border: 4px solid white; background: var(--success); color: white; }
+    .eq-circle.wrong { border: 4px solid white; background: var(--danger); color: white; }
+    .eq-ans { background: #ddd; color: #888; border: 3px solid #ccc; }
+    .eq-ans.revealed { background: var(--primary); color: white; border-color: white; }
+    .action-area { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+        border: none; border-radius: 16px; font-size: 34px; padding: 12px 30px; cursor: pointer;
+        font-weight: bold; color: white; transition: transform 0.1s; box-shadow: 0 6px 0 rgba(0,0,0,0.2);
+    }
+    .btn:active { transform: translateY(6px); box-shadow: 0 0 0; }
+    .btn-add { background-color: var(--primary); }
+    .btn-sub { background-color: var(--danger); }
+    
+    .start-menu { display: flex; flex-direction: column; gap: 12px; align-items: center; width: 100%; }
+    .btn-level { font-size: 26px; padding: 12px 20px; width: 95%; max-width: 550px; }
+    
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); display: none; flex-direction: column;
+        align-items: center; justify-content: center; z-index: 100; overflow-y: auto; padding: 15px 0;
+    }
+    .modal-content {
+        background: white; color: var(--dark); padding: 20px 25px; border-radius: 20px;
+        text-align: center; max-width: 700px; width: 95%; box-sizing: border-box; margin: auto;
+    }
+    
+    .scaffold-title { color: var(--danger); font-size: 20px; margin-top: 0; margin-bottom: 10px; }
+    .scaffold-continue-btn {
+        font-size: 20px; padding: 10px 20px; border-radius: 10px; border: none; cursor: pointer;
+        background: var(--primary); color: white; font-weight: bold; margin-top: 15px; box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+    }
+    .scaffold-continue-btn:active { transform: translateY(4px); box-shadow: 0 0 0; }
+    .bar-chart { display: flex; flex-direction: column; gap: 10px; margin: 15px 0; align-items: flex-start; }
+    .bar-row { display: flex; align-items: center; font-weight: bold; }
+    .bar-label { width: 90px; font-size: 26px; text-align: right; margin-right: 15px; }
+    .bar { height: 30px; border-radius: 8px; transition: width 1s ease-in-out; }
+    
+    .scaffold-btn {
+        font-size: 26px; padding: 10px 30px; margin: 8px; border-radius: 12px; border: 2px solid #ccc; cursor: pointer; background: white; font-weight: bold;
+    }
+    .draw-arrow { stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: dash 1s linear forwards; }
+    @keyframes dash { to { stroke-dashoffset: 0; } }
+    
+    .leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 16px; }
+    .leaderboard-table th { background: var(--primary); color: white; padding: 6px; border: 1px solid #ddd; }
+    .leaderboard-table td { padding: 6px; border: 1px solid #ddd; }
+    .leaderboard-table tr:nth-child(even) { background-color: #f9f9f9; }
+    .highlight-row { background-color: #ffeaa7 !important; font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="header">
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <button class="btn-home" id="btnHome" style="display:none;" onclick="backToLogin()">🏠 主頁</button>
+        <div>⏱️ <span id="timeDisplay">1:00</span></div>
+    </div>
+    <div class="player-info" id="playerInfoDisplay">尚未登入</div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <div>🚀 <span id="levelDisplay">-</span></div>
+        <div>🌟 <span id="scoreDisplay">0</span> <span id="comboDisplay" style="color:var(--warning)"></span></div>
+    </div>
+</div>
+<div class="game-container">
+    <div id="login-screen">
+        <h1 class="login-title">🚀 星際數學挑戰</h1>
+        
+        <div class="rules-box">
+            <h3>🌟 遊戲玩法 🌟</h3>
+            <p>1. ⏱️ <b>限時 60 秒：</b> 在時間內挑戰最高分！<br>
+               2. 🧠 <b>填滿圓圈：</b> 仔細看題目，選出 ➕ 或 ➖。<br>
+               3. 🔥 <b>沒有失敗：</b> 答錯不會出局，跟著提示學習！<br>
+               4. ⚡ <b>連續加分：</b> 連續答對可啟動 Combo！</p>
+        </div>
+        <h2 style="font-size: 18px; margin: 5px 0;">請選擇你的身分：</h2>
+        <div class="login-inputs">
+            <select id="student-class" class="login-select" onchange="updateNumSelect()">
+                <option value="">選擇班別</option>
+                <option value="2A">2A</option>
+                <option value="2B">2B</option>
+                <option value="2C">2C</option>
+                <option value="2D">2D</option>
+                <option value="教師">👨‍🏫 教師</option>
+            </select>
+            <select id="student-num" class="login-select">
+                <option value="">選擇學號/姓名</option>
+            </select>
+        </div>
+        <button class="btn btn-add" style="background:var(--success); font-size:24px; padding: 10px 30px;" onclick="processLogin()">進入遊戲</button>
+        
+        <div class="mini-leaderboard" id="miniLeaderboardArea"></div>
+    </div>
+    <div id="game-ui" style="display:none; width: 100%; display: flex; flex-direction: column; align-items: center;">
+        <div class="question-box" id="questionText">請選擇你要挑戰的難度！</div>
+        
+        <div class="equation-area" id="equation-area" style="display:none;">
+            <div class="eq-box" id="eq-x"></div>
+            <div class="eq-circle" id="eq-circle">?</div>
+            <div class="eq-box" id="eq-y"></div>
+            <div>=</div>
+            <div class="eq-box eq-ans" id="eq-ans">?</div>
+        </div>
+        <div class="action-area" id="step1-area" style="display:none;">
+            <button class="btn btn-add" onclick="checkOperator('+')">➕ 加法</button>
+            <button class="btn btn-sub" onclick="checkOperator('-')">➖ 減法</button>
+        </div>
+        <div class="start-menu" id="start-area">
+            <button class="btn btn-level" style="background:var(--success);" onclick="startGame(1)">🟢 Level 1 (基礎：求相差 / 順向多與少)</button>
+            <button class="btn btn-level" style="background:var(--warning); color:var(--dark);" onclick="startGame(2)">🟡 Level 2 (進階：逆向思考)</button>
+            <button class="btn btn-level" style="background:var(--danger);" onclick="startGame(3)">🔴 Level 3 (綜合全題型挑戰)</button>
+        </div>
+    </div>
+</div>
+<div class="modal-overlay" id="scaffoldModal">
+    <div class="modal-content">
+        <h2 class="scaffold-title">⚠️ 暫停一下，我們來推理！</h2>
+        
+        <div id="scaf-sentence-container" style="position: relative; display: inline-block; padding-bottom: 40px; font-size: 28px; font-weight: bold; margin-bottom: 5px; width: 100%;">
+            <span id="scaf-sentence"></span>
+            <svg id="hint-svg" style="display:none; position:absolute; top: 40px; left:0; width: 100%; height: 50px;" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <marker id="arrowhead" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
+                    <polygon points="0 0, 6 2.5, 0 5" fill="var(--danger)" />
+                  </marker>
+                </defs>
+                <path id="hint-path" d="" fill="transparent" stroke="var(--danger)" stroke-width="3" marker-end="url(#arrowhead)"/>
+            </svg>
+        </div>
+        
+        <p id="scaffold-prompt-text" style="font-size: 24px;">這句句子中，『<span id="scaf-keyword-display" style="color:var(--danger); font-weight:bold;"></span>』是指誰？</p>
+        <div id="scaffold-btns">
+            <button class="scaffold-btn" id="btn-a" data-choice="A"></button>
+            <button class="scaffold-btn" id="btn-b" data-choice="B"></button>
+        </div>
+        
+        <div class="bar-chart" id="barChartArea" style="display:none; width:100%; justify-content:center; align-items:center;">
+            <div style="display:flex; flex-direction:column; gap:12px; width:100%; max-width: 400px; margin:0 auto;">
+                <div class="bar-row"><div class="bar-label" id="bar-a-name">A</div><div class="bar" id="barA" style="width: 0px;"></div></div>
+                <div class="bar-row"><div class="bar-label" id="bar-b-name">B</div><div class="bar" id="barB" style="width: 0px;"></div></div>
+            </div>
+        </div>
+        
+        <div id="scaffoldResult" style="display:none; margin-top: 15px;"></div>
+        
+        <button id="scaffoldContinue" class="scaffold-continue-btn" style="display:none;" onclick="closeScaffold()">我知道了，重新選方法！</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="endModal">
+    <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+        <h1 style="margin-top:0; color: var(--success);">🏆 遊戲完成！</h1>
+        <p style="font-size: 24px; margin: 10px 0;">你這次的分數是：<span id="finalScore" style="color:var(--warning); font-weight:bold; font-size: 38px;">0</span></p>
+        <p style="font-size: 22px; margin: 0 0 15px 0;">目前排名：第 <span id="currentRank" style="color:var(--danger); font-weight:bold; font-size: 32px;">-</span> 名</p>
+        
+        <h3 style="color: var(--primary); border-bottom: 2px solid #ccc; padding-bottom: 5px;">📜 本機最佳成績排行榜 </h3>
+        <div id="leaderboardArea"></div>
+        <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px; flex-wrap: wrap;">
+            <button class="btn btn-add" style="background:var(--primary); font-size: 20px; padding: 10px 20px;" onclick="resetToMenu()">🎮 再玩一次</button>
+            <button class="btn btn-add" style="background:var(--success); font-size: 20px; padding: 10px 20px;" onclick="backToHomeFromEnd()">🏠 回到主頁</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 🌟【Supabase 雲端資料庫初始化設定】 🌟
+    const SUPABASE_URL = 'https://ipyxhnxwqelhtoutvoyw.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlweXhobnh3cWVsaHRvdXR2b3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNTE0ODAsImV4cCI6MjEwNjkyNzQ4MH0.TD_hcPUy3G6yuOsVtLTZdVL9mKBP4Xnb1fLukwd6jCc';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    var timeLeft = 60, score = 0, combo = 0, level = 1, timerInterval = null, currentQ = {}, isProcessing = false;
+    var currentPlayer = { class: "", num: "" };
+    var nameColors = {
+        "小明": "#3498db", "小華": "#e67e22", "軒軒": "#9b59b6", "樂樂": "#1abc9c", 
+        "小麗": "#e74c3c", "小志": "#16a085", "美美": "#ff6b81", "晴晴": "#f39c12"
+    };
+    var colorGroups = {
+        "小明": "blue", "軒軒": "purple", "小華": "orange", "晴晴": "orange",
+        "樂樂": "green", "小志": "green", "小麗": "red", "美美": "red"
+    };
+    var names = ["小明", "小華", "軒軒", "樂樂", "小麗", "小志", "美美", "晴晴"];
+    var items = ["粒糖", "部車仔", "支鉛筆", "張貼紙"];
+    var teachersList = ["陳麗嫦校長", "袁紫茵老師", "陳曉晴老師", "黃柏榮老師", "陳慧淇老師"];
+    
+    window.onload = function() {
+        updateNumSelect();
+        renderMiniLeaderboard();
+        document.getElementById("game-ui").style.display = "none";
+        
+        // 🌟 事件註冊一輩子只有一次，決不在 openScaffold 內重複生成綁定
+        document.getElementById('btn-a').addEventListener('click', function() { executeSubjectCheck(this.dataset.choice); });
+        document.getElementById('btn-b').addEventListener('click', function() { executeSubjectCheck(this.dataset.choice); });
+        
+        // 🌟【實時同步】：監聽 Supabase 雲端資料庫。當老師您在後台改動、刪除數據時，遊戲端會「不需刷頁」瞬間自動刷新排行榜！
+        supabaseClient
+            .channel('public:math_scores')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'math_scores' }, function(payload) {
+                renderMiniLeaderboard(); // 實時更新登入畫面的小排行榜
+                if (document.getElementById('endModal').style.display === 'flex') {
+                    fetchCloudLeaderboard(); // 如果正開著結算畫面，同時更新結算排行榜
+                }
+            })
+            .subscribe();
+    };
+    
+    function updateNumSelect() {
+        var sClass = document.getElementById("student-class").value;
+        var numSelect = document.getElementById("student-num");
+        numSelect.innerHTML = '<option value="">選擇學號/姓名</option>';
+        if (sClass === "教師") {
+            for (var i = 0; i < teachersList.length; i++) {
+                numSelect.innerHTML += '<option value="' + teachersList[i] + '">' + teachersList[i] + '</option>';
+            }
+        } else if (sClass !== "") {
+            for(var i = 1; i <= 30; i++) {
+                numSelect.innerHTML += '<option value="' + i + '">' + i + '號</option>';
+            }
+        }
+    }
+    
+    // 🌟【雲端讀取】：從 Supabase 取得最新數據更新登入畫面的 Top 5 小排行榜
+    async function renderMiniLeaderboard() {
+        var lbArea = document.getElementById("miniLeaderboardArea");
+        
+        const { data: scores, error } = await supabaseClient
+            .from('math_scores')
+            .select('*')
+            .order('score', { ascending: false });
+            
+        if (error || !scores || scores.length === 0) {
+            lbArea.innerHTML = "<p style='color:#888; font-size:14px; margin: 5px 0;'>暫無紀錄，快來成為全級第一名！</p>";
+            return;
+        }
+        
+        // 取每位玩家的最佳成績進行全級排行展示
+        var filteredLeaderboard = [];
+        var seenPlayers = {};
+        for(var i=0; i<scores.length; i++) {
+            var playerKey = scores[i].class + "-" + scores[i].student_num;
+            if(!seenPlayers[playerKey]) {
+                seenPlayers[playerKey] = true;
+                filteredLeaderboard.push(scores[i]);
+            }
+        }
+        
+        var html = '<h3>🏆 Top 5 神射手</h3>';
+        html += '<table class="mini-table">';
+        html += '<tr><th>排名</th><th>身分</th><th>最高分</th></tr>';
+        for (var i = 0; i < Math.min(filteredLeaderboard.length, 5); i++) {
+            var rankDisplay = (i===0)?'🥇':(i===1)?'🥈':(i===2)?'🥉':(i+1);
+            var identity = (filteredLeaderboard[i].class === "教師") ? filteredLeaderboard[i].student_num : (filteredLeaderboard[i].class + " " + filteredLeaderboard[i].student_num + "號");
+            html += '<tr><td>' + rankDisplay + '</td><td>' + identity + '</td><td style="color:var(--danger); font-weight:bold;">' + filteredLeaderboard[i].score + '</td></tr>';
+        }
+        html += '</table>';
+        lbArea.innerHTML = html;
+    }
+    
+    function processLogin() {
+        var sClass = document.getElementById("student-class").value;
+        var sNum = document.getElementById("student-num").value;
+        if (!sClass || !sNum) { alert("請先選擇您的身分喔！"); return; }
+        currentPlayer.class = sClass; currentPlayer.num = sNum;
+        
+        var identityDisplay = (sClass === "教師") ? sNum : (sClass + "班 " + sNum + "號");
+        document.getElementById("playerInfoDisplay").innerText = "👤 " + identityDisplay;
+        
+        document.getElementById("login-screen").style.display = "none";
+        document.getElementById("game-ui").style.display = "flex";
+        document.getElementById("btnHome").style.display = "inline-block"; 
+        
+        resetToMenu();
+    }
+    
+    function backToLogin() {
+        if(timerInterval) clearInterval(timerInterval);
+        timerInterval = null;
+        document.getElementById("game-ui").style.display = "none";
+        document.getElementById("btnHome").style.display = "none";
+        document.getElementById("login-screen").style.display = "block";
+        document.getElementById('timeDisplay').innerText = '1:00';
+        document.getElementById('scoreDisplay').innerText = '0';
+        renderMiniLeaderboard(); 
+    }
+    
+    function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+    function getRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    function colorName(name) { return '<span style="color:' + nameColors[name] + '; font-weight:bold;">' + name + '</span>'; }
+    
+    function resetEquationCircle() {
+        var circle = document.getElementById('eq-circle');
+        circle.innerText = '?'; circle.className = 'eq-circle'; 
+        var eqAns = document.getElementById('eq-ans');
+        eqAns.innerText = '?'; eqAns.className = 'eq-box eq-ans';
+        isProcessing = false; 
+    }
+    
+    function generateQuestion() {
+        try {
+            resetEquationCircle();
+            var nameA = getRandom(names);
+            var nameB = getRandom(names);
+            while(nameB === nameA || colorGroups[nameB] === colorGroups[nameA]) { nameB = getRandom(names); }
+            var item = getRandom(items);
+            
+            var qCategory = '';
+            if (level === 1) { qCategory = Math.random() < 0.5 ? 'diff' : 'L1_target'; } 
+            else if (level === 2) { qCategory = 'L2_target'; } 
+            else {
+                var rand = Math.random();
+                if (rand < 0.33) qCategory = 'diff'; else if (rand < 0.66) qCategory = 'L1_target'; else qCategory = 'L2_target';
+            }
+            var X, Y, ans, operator, text, keyword;
+            var isTargetB = false; 
+            if (qCategory === 'diff') {
+                var big = randomInt(7, 15); var small = randomInt(2, big - 1);
+                var isAMore = Math.random() > 0.5;
+                var valA = isAMore ? big : small; var valB = isAMore ? small : big;
+                ans = big - small; operator = '-'; 
+                
+                var askText = (Math.random() > 0.5) 
+                    ? colorName(nameA) + ' 比 ' + colorName(nameB) + ' 多幾多' + item + '？'
+                    : colorName(nameB) + ' 比 ' + colorName(nameA) + ' 少幾多' + item + '？';
+                text = '<div class="q-intro">' + colorName(nameA) + ' 有 ' + valA + ' ' + item + '。</div>' +
+                       '<div class="q-intro">' + colorName(nameB) + ' 有 ' + valB + ' ' + item + '。</div>' +
+                       '<div class="q-target">' + askText + '</div>';
+                
+                X = big; Y = small; 
+                currentQ = { nameA: nameA, nameB: nameB, item: item, X: X, Y: Y, valA: valA, valB: valB, ans: ans, operator: operator, qCategory: qCategory, isTargetB: false };
+                
+            } else if (qCategory === 'L1_target') {
+                isTargetB = true; 
+                X = randomInt(8, 14); Y = randomInt(2, 6);
+                var isAMore = Math.random() > 0.5;
+                if(isAMore) { 
+                    ans = X - Y; operator = '-'; keyword = '少';
+                    text = '<div class="q-intro">' + colorName(nameA) + ' 有 ' + X + ' ' + item + '。</div><div class="q-compare">' + colorName(nameB) + ' 比 ' + colorName(nameA) + ' 少 ' + Y + ' ' + item + '。</div><div class="q-target">' + colorName(nameB) + ' 有幾多' + item + '？</div>';
+                } else {
+                    ans = X + Y; operator = '+'; keyword = '多';
+                    text = '<div class="q-intro">' + colorName(nameA) + ' 有 ' + X + ' ' + item + '。</div><div class="q-compare">' + colorName(nameB) + ' 比 ' + colorName(nameA) + ' 多 ' + Y + ' ' + item + '。</div><div class="q-target">' + colorName(nameB) + ' 有幾多' + item + '？</div>';
+                }
+                currentQ = { nameA: nameA, nameB: nameB, item: item, X: X, Y: Y, ans: ans, operator: operator, keyword: keyword, qCategory: qCategory, isTargetB: isTargetB, scafS1: isTargetB ? nameB : nameA, scafS2: isTargetB ? nameA : nameB };
+            } else {
+                isTargetB = false;
+                Y = randomInt(2, 8);
+                var isAMore = Math.random() > 0.5;
+                if(isAMore) {
+                    ans = randomInt(4, 12); X = ans + Y; operator = '-'; keyword = '多';
+                    text = '<div class="q-intro">' + colorName(nameA) + ' 有 ' + X + ' ' + item + '。</div><div class="q-compare">' + colorName(nameA) + ' 比 ' + colorName(nameB) + ' 多 ' + Y + ' ' + item + '。</div><div class="q-target">' + colorName(nameB) + ' 有幾多' + item + '？</div>';
+                } else {
+                    X = randomInt(4, 12); ans = X + Y; operator = '+'; keyword = '少';
+                    text = '<div class="q-intro">' + colorName(nameA) + ' 有 ' + X + ' ' + item + '。</div><div class="q-compare">' + colorName(nameA) + ' 比 ' + colorName(nameB) + ' 少 ' + Y + ' ' + item + '。</div><div class="q-target">' + colorName(nameB) + ' 有幾多' + item + '？</div>';
+                }
+                currentQ = { nameA: nameA, nameB: nameB, item: item, X: X, Y: Y, ans: ans, operator: operator, keyword: keyword, qCategory: qCategory, isTargetB: isTargetB, scafS1: isTargetB ? nameB : nameA, scafS2: isTargetB ? nameA : nameB };
+            }
+            
+            document.getElementById('questionText').innerHTML = text;
+            document.getElementById('eq-x').innerText = X;
+            document.getElementById('eq-y').innerText = Y;
+            document.getElementById('equation-area').style.display = 'flex';
+            document.getElementById('step1-area').style.display = 'flex';
+            document.getElementById('start-area').style.display = 'none';
+        } catch (e) { console.error(e); }
+    }
+    
+    function checkOperator(op) {
+        if(isProcessing) return;
+        isProcessing = true;
+        var circle = document.getElementById('eq-circle');
+        circle.innerText = op; circle.classList.add('filled'); 
+        if(op === currentQ.operator) {
+            circle.classList.add('correct'); 
+            var eqAns = document.getElementById('eq-ans');
+            eqAns.innerText = currentQ.ans; eqAns.classList.add('revealed'); 
+            combo++; score += Math.floor((level * 10) * (combo > 2 ? 1.5 : 1));
+            updateHeader();
+            
+            setTimeout(function() { 
+                isProcessing = false; 
+                if(timeLeft > 0) generateQuestion(); 
+            }, 1200);
+        } else {
+            circle.classList.add('wrong'); 
+            combo = 0; updateHeader();
+            setTimeout(function() {
+                isProcessing = false; 
+                if(timeLeft > 0) { openScaffold(); }
+            }, 600);
+        }
+    }
+
+    function openScaffold() {
+        if(timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        document.getElementById('scaffoldModal').style.display = 'flex';
+        
+        var isDiff = currentQ.qCategory === 'diff';
+        document.getElementById('scaf-sentence-container').style.display = isDiff ? 'none' : 'inline-block';
+        document.getElementById('scaffold-prompt-text').style.display = isDiff ? 'none' : 'block';
+        document.getElementById('scaffold-btns').style.display = isDiff ? 'none' : 'block';
+        document.getElementById('barChartArea').style.display = isDiff ? 'flex' : 'none';
+        
+        if (isDiff) {
+            document.getElementById('bar-a-name').innerHTML = colorName(currentQ.nameA);
+            document.getElementById('bar-b-name').innerHTML = colorName(currentQ.nameB);
+            document.getElementById('barA').style.backgroundColor = nameColors[currentQ.nameA];
+            document.getElementById('barB').style.backgroundColor = nameColors[currentQ.nameB];
+            
+            var resText = '<div style="font-size: 18px; color: #777; margin-bottom: 10px;">💡 提示：</div><div style="background-color: #fff8e1; border: 3px dashed var(--warning); border-radius: 12px; padding: 15px 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"><div style="font-size: 20px; color: #555; margin-bottom: 5px;">比較兩個數量找相差，</div><div style="font-size: 32px; font-weight: 900; color: var(--danger); line-height: 1.3;">我們一定要用 減法 ➖ 喔！</div></div>';
+            
+            document.getElementById('scaffoldResult').innerHTML = resText;
+            document.getElementById('scaffoldResult').style.display = 'block';
+            
+            setTimeout(function() {
+                document.getElementById('barA').style.width = (currentQ.valA * 12 + 40) + 'px';
+                document.getElementById('barB').style.width = (currentQ.valB * 12 + 40) + 'px';
+                document.getElementById('scaffoldContinue').style.display = 'inline-block';
+            }, 300);
+        } else {
+            // 🌟 核心防脫節處理：不改寫外層 DOM ID 結構，僅清空與重設內部
+            document.getElementById('scaffold-prompt-text').innerHTML = '這句句子中，『<span id="scaf-keyword-display" style="color:var(--danger); font-weight:bold;"></span>』是指誰？';
+            document.getElementById('scaffoldResult').style.display = 'none';
+            document.getElementById('scaffoldContinue').style.display = 'none';
+            document.getElementById('hint-svg').style.display = 'none';
+            document.getElementById('barA').style.width = '0px'; document.getElementById('barB').style.width = '0px';
+            
+            var subj1 = currentQ.scafS1;
+            var subj2 = currentQ.scafS2;
+            
+            var sentenceHTML = '「<span id="w-subj1">' + colorName(subj1) + '</span> 比 <span id="w-subj2">' + colorName(subj2) + '</span> <span id="w-keyword" style="color:var(--danger)">' + currentQ.keyword + '</span> ' + currentQ.Y + ' ' + currentQ.item + '」';
+            document.getElementById('scaf-sentence').innerHTML = sentenceHTML;
+            document.getElementById('scaf-keyword-display').innerText = currentQ.keyword;
+            
+            document.getElementById('btn-a').innerHTML = colorName(subj1);
+            document.getElementById('btn-b').innerHTML = colorName(subj2);
+        }
+    }
+    
+    function executeSubjectCheck(btnChoice) {
+        var snapshotS1 = currentQ.scafS1;
+        var snapshotS2 = currentQ.scafS2;
+        var isCorrect = (btnChoice === 'A');
+        
+        if(isCorrect) {
+            document.getElementById('scaffold-btns').style.display = 'none';
+            document.getElementById('scaffold-prompt-text').style.display = 'none';
+            document.getElementById('barChartArea').style.display = 'flex';
+            document.getElementById('hint-svg').style.display = 'none';
+            
+            var cSubj = colorName(snapshotS1);
+            var cOther = colorName(snapshotS2);
+            
+            var resText = '<div style="font-size: 18px; color: #777; margin-bottom: 8px;">✅ 答對了！『' + currentQ.keyword + '』是指 ' + cSubj + '。</div><div style="background-color: #fff8e1; border: 3px dashed var(--warning); border-radius: 12px; padding: 12px 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"><div style="font-size: 20px; color: #555; margin-bottom: 5px;">所以，</div>';
+            if(currentQ.keyword === '少') { resText += '<div style="font-size: 32px; font-weight: 900; color: var(--dark); line-height: 1.3;">' + cSubj + ' 較少，<br>' + cOther + ' 較多！</div></div>'; } 
+            else { resText += '<div style="font-size: 32px; font-weight: 900; color: var(--dark); line-height: 1.3;">' + cSubj + ' 較多，<br>' + cOther + ' 較少！</div></div>'; }
+            
+            document.getElementById('scaffoldResult').innerHTML = resText;
+            document.getElementById('scaffoldResult').style.display = 'block';
+            
+            document.getElementById('bar-a-name').innerHTML = cSubj;
+            document.getElementById('bar-b-name').innerHTML = cOther;
+            document.getElementById('barA').style.backgroundColor = nameColors[snapshotS1];
+            document.getElementById('barB').style.backgroundColor = nameColors[snapshotS2];
+            
+            setTimeout(function() {
+                var baseWidth = 120, diffWidth = 80;
+                if(currentQ.operator === '+') {
+                    document.getElementById('barA').style.width = baseWidth + 'px'; document.getElementById('barB').style.width = (baseWidth + diffWidth) + 'px';
+                } else {
+                    document.getElementById('barA').style.width = (baseWidth + diffWidth) + 'px'; document.getElementById('barB').style.width = baseWidth + 'px';
+                }
+                document.getElementById('scaffoldContinue').style.display = 'inline-block';
+            }, 300);
+            
+        } else {
+            document.getElementById('scaffold-prompt-text').innerHTML = '哎呀，再看清楚！『<span style="color:var(--danger); font-weight:bold;">' + currentQ.keyword + '</span>』是緊接著誰的名字？';
+            
+            var k = document.getElementById('w-keyword'); 
+            var s1 = document.getElementById('w-subj1');
+            var svg = document.getElementById('hint-svg'); 
+            var path = document.getElementById('hint-path');
+            var container = document.getElementById('scaf-sentence-container');
+            
+            if (k && s1 && svg && path && container) {
+                var containerRect = container.getBoundingClientRect();
+                var kRect = k.getBoundingClientRect();
+                var s1Rect = s1.getBoundingClientRect();
+                
+                var startX = (kRect.left + kRect.width / 2) - containerRect.left;
+                var endX = (s1Rect.left + s1Rect.width / 2) - containerRect.left;
+                var midX = (startX + endX) / 2;
+                
+                svg.style.display = 'block';
+                path.setAttribute('d', 'M ' + startX + ' 0 Q ' + midX + ' 40 ' + endX + ' 0');
+                path.classList.remove('draw-arrow'); 
+                void path.offsetWidth; 
+                path.classList.add('draw-arrow');
+            }
+        }
+    }
+    
+    function closeScaffold() {
+        document.getElementById('scaffoldModal').style.display = 'none';
+        
+        // 🌟 關閉時完美大掃除，杜絕任何 DOM 殘留
+        document.getElementById('scaffold-prompt-text').innerHTML = '這句句子中，『<span id="scaf-keyword-display" style="color:var(--danger); font-weight:bold;"></span>』是指誰？';
+        document.getElementById('scaffoldResult').style.display = 'none';
+        document.getElementById('scaffoldContinue').style.display = 'none';
+        document.getElementById('hint-svg').style.display = 'none';
+        
+        if(!timerInterval) { timerInterval = setInterval(updateTime, 1000); }
+        resetEquationCircle(); 
+    }
+    
+    function updateHeader() {
+        document.getElementById('scoreDisplay').innerText = score;
+        document.getElementById('levelDisplay').innerText = level;
+        document.getElementById('comboDisplay').innerText = combo >= 2 ? '(🔥Combo x' + combo + ')' : '';
+    }
+    
+    function updateTime() {
+        timeLeft--;
+        var m = Math.floor(timeLeft / 60); var s = timeLeft % 60;
+        document.getElementById('timeDisplay').innerText = m + ':' + (s < 10 ? '0' : '') + s;
+        if(timeLeft <= 0) endGame();
+    }
+    
+    function startGame(selectedLevel) {
+        if(timerInterval) clearInterval(timerInterval);
+        level = selectedLevel; score = 0; timeLeft = 60; combo = 0;
+        updateHeader(); generateQuestion();
+        document.getElementById('timeDisplay').innerText = '1:00';
+        timerInterval = setInterval(updateTime, 1000);
+    }
+    
+    // 🌟【雲端上傳】：學生完遊時，極速將分數傳上 Supabase 雲端
+    async function uploadScoreToCloud() {
+        var playerClass = currentPlayer.class;
+        var playerNum = currentPlayer.num;
+        
+        const { error } = await supabaseClient
+            .from('math_scores')
+            .insert([{ class: playerClass, student_num: playerNum, score: score }]);
+            
+        if (error) {
+            console.error("雲端數據同步失敗:", error);
+        } else {
+            console.log("數據成功極速同步雲端！");
+        }
+    }
+
+    // 🌟【雲端讀取排行】：獲取最新排行榜並比對出當前學生的正確排名
+    async function fetchCloudLeaderboard() {
+        const { data: scores, error } = await supabaseClient
+            .from('math_scores')
+            .select('*')
+            .order('score', { ascending: false });
+            
+        if (error || !scores) {
+            console.error("雲端數據載入失敗:", error);
+            return;
+        }
+
+        // 依據玩家 ID 計算每個人的最佳歷史紀錄，防止同一人佔據多個排名
+        var uniqueLeaderboard = [];
+        var seenPlayers = {};
+        for(var i = 0; i < scores.length; i++) {
+            var playerKey = scores[i].class + "-" + scores[i].student_num;
+            if(!seenPlayers[playerKey]) {
+                seenPlayers[playerKey] = true;
+                uniqueLeaderboard.push(scores[i]);
+            }
+        }
+        
+        // 算出學生目前在全校的最新排名
+        var playerID = currentPlayer.class + "-" + currentPlayer.num;
+        var currentRank = -1;
+        for (var j = 0; j < uniqueLeaderboard.length; j++) {
+            if (uniqueLeaderboard[j].class === currentPlayer.class && uniqueLeaderboard[j].student_num === currentPlayer.num) {
+                currentRank = j + 1;
+                break;
+            }
+        }
+        
+        if (document.getElementById('currentRank')) {
+            document.getElementById('currentRank').innerText = currentRank > 0 ? currentRank : '-';
+        }
+        
+        // 渲染結算畫面的前十名排行榜 HTML Table
+        var html = '<table class="leaderboard-table">';
+        html += '<tr><th>排名</th><th>身分</th><th>最佳分數</th></tr>';
+        
+        for (var k = 0; k < Math.min(uniqueLeaderboard.length, 10); k++) {
+            var isSelf = (uniqueLeaderboard[k].class === currentPlayer.class && uniqueLeaderboard[k].student_num === currentPlayer.num);
+            var rowClass = isSelf ? 'highlight-row' : '';
+            var rank = k + 1;
+            var rankDisplay = rank;
+            if(rank === 1) rankDisplay = '🥇 1';
+            if(rank === 2) rankDisplay = '🥈 2';
+            if(rank === 3) rankDisplay = '🥉 3';
+            
+            var identity = (uniqueLeaderboard[k].class === "教師") ? uniqueLeaderboard[k].student_num : (uniqueLeaderboard[k].class + "班 " + uniqueLeaderboard[k].student_num + "號");
+            
+            html += '<tr class="' + rowClass + '">';
+            html += '<td>' + rankDisplay + '</td>';
+            html += '<td>' + identity + '</td>';
+            html += '<td style="color:var(--danger); font-weight:bold;">' + uniqueLeaderboard[k].score + '</td>';
+            html += '</tr>';
+        }
+        html += '</table>';
+        document.getElementById('leaderboardArea').innerHTML = html;
+    }
+    
+    async function endGame() {
+        if(timerInterval) clearInterval(timerInterval);
+        document.getElementById('finalScore').innerText = score;
+        
+        // 先上傳，再更新顯示
+        await uploadScoreToCloud();
+        await fetchCloudLeaderboard();
+        
+        document.getElementById('endModal').style.display = 'flex';
+    }
+    
+    function backToHomeFromEnd() {
+        document.getElementById('endModal').style.display = 'none';
+        backToLogin();
+    }
+    
+    function resetToMenu() {
+        document.getElementById('endModal').style.display = 'none';
+        document.getElementById("questionText").innerHTML = "請選擇你要挑戰的難度！";
+        document.getElementById("start-area").style.display = "flex";
+        document.getElementById("step1-area").style.display = "none";
+        document.getElementById("equation-area").style.display = "none";
+        document.getElementById('timeDisplay').innerText = '1:00';
+        document.getElementById('scoreDisplay').innerText = '0';
+        renderMiniLeaderboard();
+    }
+</script>
+</body>
+</html>
