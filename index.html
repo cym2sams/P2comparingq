@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>星際數學挑戰 🚀</title>
+<title>星際數學挑戰 🚀 (雲端實時版)</title>
 <!-- 🌟 引入 Supabase 官方極速實時 SDK 🌟 -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -133,6 +133,20 @@
     .leaderboard-table td { padding: 6px; border: 1px solid #ddd; }
     .leaderboard-table tr:nth-child(even) { background-color: #f9f9f9; }
     .highlight-row { background-color: #ffeaa7 !important; font-weight: bold; }
+
+    /* 🌟 右下角專屬署名設計 🌟 */
+    .author-tag {
+        position: fixed;
+        bottom: 8px;
+        right: 12px;
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.65);
+        z-index: 50;
+        pointer-events: none;
+        letter-spacing: 0.5px;
+        font-weight: bold;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    }
 </style>
 </head>
 <body>
@@ -176,7 +190,8 @@
         
         <div class="mini-leaderboard" id="miniLeaderboardArea"></div>
     </div>
-    <div id="game-ui" style="display:none; width: 100%; display: flex; flex-direction: column; align-items: center;">
+    
+    <div id="game-ui" style="display:none; width: 100%; flex-direction: column; align-items: center;">
         <div class="question-box" id="questionText">請選擇你要挑戰的難度！</div>
         
         <div class="equation-area" id="equation-area" style="display:none;">
@@ -197,6 +212,7 @@
         </div>
     </div>
 </div>
+
 <div class="modal-overlay" id="scaffoldModal">
     <div class="modal-content">
         <h2 class="scaffold-title">⚠️ 暫停一下，我們來推理！</h2>
@@ -238,7 +254,7 @@
         <p style="font-size: 24px; margin: 10px 0;">你這次的分數是：<span id="finalScore" style="color:var(--warning); font-weight:bold; font-size: 38px;">0</span></p>
         <p style="font-size: 22px; margin: 0 0 15px 0;">目前排名：第 <span id="currentRank" style="color:var(--danger); font-weight:bold; font-size: 32px;">-</span> 名</p>
         
-        <h3 style="color: var(--primary); border-bottom: 2px solid #ccc; padding-bottom: 5px;">📜 本機最佳成績排行榜 </h3>
+        <h3 style="color: var(--primary); border-bottom: 2px solid #ccc; padding-bottom: 5px;">📜 全級最佳成績實時排行榜 </h3>
         <div id="leaderboardArea"></div>
         <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px; flex-wrap: wrap;">
             <button class="btn btn-add" style="background:var(--primary); font-size: 20px; padding: 10px 20px;" onclick="resetToMenu()">🎮 再玩一次</button>
@@ -247,8 +263,11 @@
     </div>
 </div>
 
+<!-- 🌟 右下角署名 🌟 -->
+<div class="author-tag">Designed by 陳綺雯老師</div>
+
 <script>
-    // 🌟【Supabase 雲端資料庫初始化設定】 🌟
+    // 🌟【Supabase 雲端實時金鑰設定】 🌟
     const SUPABASE_URL = 'https://ipyxhnxwqelhtoutvoyw.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlweXhobnh3cWVsaHRvdXR2b3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNTE0ODAsImV4cCI6MjEwNjkyNzQ4MH0.TD_hcPUy3G6yuOsVtLTZdVL9mKBP4Xnb1fLukwd6jCc';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -272,17 +291,17 @@
         renderMiniLeaderboard();
         document.getElementById("game-ui").style.display = "none";
         
-        // 🌟 事件註冊一輩子只有一次，決不在 openScaffold 內重複生成綁定
+        // 🌟 唯一事件註冊，徹底根除任何閉包污染
         document.getElementById('btn-a').addEventListener('click', function() { executeSubjectCheck(this.dataset.choice); });
         document.getElementById('btn-b').addEventListener('click', function() { executeSubjectCheck(this.dataset.choice); });
         
-        // 🌟【實時同步】：監聽 Supabase 雲端資料庫。當老師您在後台改動、刪除數據時，遊戲端會「不需刷頁」瞬間自動刷新排行榜！
+        // 🌟【實時監聽】：後台手動修改或刪除資料時，全校客戶端 0.1 秒自動同步刷新
         supabaseClient
             .channel('public:math_scores')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'math_scores' }, function(payload) {
-                renderMiniLeaderboard(); // 實時更新登入畫面的小排行榜
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'math_scores' }, function() {
+                renderMiniLeaderboard();
                 if (document.getElementById('endModal').style.display === 'flex') {
-                    fetchCloudLeaderboard(); // 如果正開著結算畫面，同時更新結算排行榜
+                    fetchCloudLeaderboard();
                 }
             })
             .subscribe();
@@ -303,41 +322,41 @@
         }
     }
     
-    // 🌟【雲端讀取】：從 Supabase 取得最新數據更新登入畫面的 Top 5 小排行榜
     async function renderMiniLeaderboard() {
         var lbArea = document.getElementById("miniLeaderboardArea");
-        
-        const { data: scores, error } = await supabaseClient
-            .from('math_scores')
-            .select('*')
-            .order('score', { ascending: false });
-            
-        if (error || !scores || scores.length === 0) {
-            lbArea.innerHTML = "<p style='color:#888; font-size:14px; margin: 5px 0;'>暫無紀錄，快來成為全級第一名！</p>";
-            return;
-        }
-        
-        // 取每位玩家的最佳成績進行全級排行展示
-        var filteredLeaderboard = [];
-        var seenPlayers = {};
-        for(var i=0; i<scores.length; i++) {
-            var playerKey = scores[i].class + "-" + scores[i].student_num;
-            if(!seenPlayers[playerKey]) {
-                seenPlayers[playerKey] = true;
-                filteredLeaderboard.push(scores[i]);
+        try {
+            const { data: scores, error } = await supabaseClient
+                .from('math_scores')
+                .select('*')
+                .order('score', { ascending: false });
+                
+            if (error || !scores || scores.length === 0) {
+                lbArea.innerHTML = "<p style='color:#888; font-size:14px; margin: 5px 0;'>暫無紀錄，快來成為全級第一名！</p>";
+                return;
             }
-        }
-        
-        var html = '<h3>🏆 Top 5 神射手</h3>';
-        html += '<table class="mini-table">';
-        html += '<tr><th>排名</th><th>身分</th><th>最高分</th></tr>';
-        for (var i = 0; i < Math.min(filteredLeaderboard.length, 5); i++) {
-            var rankDisplay = (i===0)?'🥇':(i===1)?'🥈':(i===2)?'🥉':(i+1);
-            var identity = (filteredLeaderboard[i].class === "教師") ? filteredLeaderboard[i].student_num : (filteredLeaderboard[i].class + " " + filteredLeaderboard[i].student_num + "號");
-            html += '<tr><td>' + rankDisplay + '</td><td>' + identity + '</td><td style="color:var(--danger); font-weight:bold;">' + filteredLeaderboard[i].score + '</td></tr>';
-        }
-        html += '</table>';
-        lbArea.innerHTML = html;
+            
+            // 過濾每位學生的最高成績
+            var filteredLeaderboard = [];
+            var seenPlayers = {};
+            for(var i=0; i<scores.length; i++) {
+                var playerKey = scores[i].class + "-" + scores[i].student_num;
+                if(!seenPlayers[playerKey]) {
+                    seenPlayers[playerKey] = true;
+                    filteredLeaderboard.push(scores[i]);
+                }
+            }
+            
+            var html = '<h3>🏆 Top 5 神射手</h3>';
+            html += '<table class="mini-table">';
+            html += '<tr><th>排名</th><th>身分</th><th>最高分</th></tr>';
+            for (var j = 0; j < Math.min(filteredLeaderboard.length, 5); j++) {
+                var rankDisplay = (j===0)?'🥇':(j===1)?'🥈':(j===2)?'🥉':(j+1);
+                var identity = (filteredLeaderboard[j].class === "教師") ? filteredLeaderboard[j].student_num : (filteredLeaderboard[j].class + " " + filteredLeaderboard[j].student_num + "號");
+                html += '<tr><td>' + rankDisplay + '</td><td>' + identity + '</td><td style="color:var(--danger); font-weight:bold;">' + filteredLeaderboard[j].score + '</td></tr>';
+            }
+            html += '</table>';
+            lbArea.innerHTML = html;
+        } catch (e) { console.error(e); }
     }
     
     function processLogin() {
@@ -500,7 +519,6 @@
                 document.getElementById('scaffoldContinue').style.display = 'inline-block';
             }, 300);
         } else {
-            // 🌟 核心防脫節處理：不改寫外層 DOM ID 結構，僅清空與重設內部
             document.getElementById('scaffold-prompt-text').innerHTML = '這句句子中，『<span id="scaf-keyword-display" style="color:var(--danger); font-weight:bold;"></span>』是指誰？';
             document.getElementById('scaffoldResult').style.display = 'none';
             document.getElementById('scaffoldContinue').style.display = 'none';
@@ -545,12 +563,15 @@
             document.getElementById('barA').style.backgroundColor = nameColors[snapshotS1];
             document.getElementById('barB').style.backgroundColor = nameColors[snapshotS2];
             
+            // 🌟 長條圖物理邏輯校準：依據「多/少」關鍵字決定長短
             setTimeout(function() {
                 var baseWidth = 120, diffWidth = 80;
-                if(currentQ.operator === '+') {
-                    document.getElementById('barA').style.width = baseWidth + 'px'; document.getElementById('barB').style.width = (baseWidth + diffWidth) + 'px';
+                if(currentQ.keyword === '多') {
+                    document.getElementById('barA').style.width = (baseWidth + diffWidth) + 'px'; 
+                    document.getElementById('barB').style.width = baseWidth + 'px';
                 } else {
-                    document.getElementById('barA').style.width = (baseWidth + diffWidth) + 'px'; document.getElementById('barB').style.width = baseWidth + 'px';
+                    document.getElementById('barA').style.width = baseWidth + 'px'; 
+                    document.getElementById('barB').style.width = (baseWidth + diffWidth) + 'px';
                 }
                 document.getElementById('scaffoldContinue').style.display = 'inline-block';
             }, 300);
@@ -585,7 +606,6 @@
     function closeScaffold() {
         document.getElementById('scaffoldModal').style.display = 'none';
         
-        // 🌟 關閉時完美大掃除，杜絕任何 DOM 殘留
         document.getElementById('scaffold-prompt-text').innerHTML = '這句句子中，『<span id="scaf-keyword-display" style="color:var(--danger); font-weight:bold;"></span>』是指誰？';
         document.getElementById('scaffoldResult').style.display = 'none';
         document.getElementById('scaffoldContinue').style.display = 'none';
@@ -616,89 +636,88 @@
         timerInterval = setInterval(updateTime, 1000);
     }
     
-    // 🌟【雲端上傳】：學生完遊時，極速將分數傳上 Supabase 雲端
+    // 🌟【雲端寫入】：完賽後自動以 0.1 秒極速上傳至 Supabase
     async function uploadScoreToCloud() {
         var playerClass = currentPlayer.class;
         var playerNum = currentPlayer.num;
         
-        const { error } = await supabaseClient
-            .from('math_scores')
-            .insert([{ class: playerClass, student_num: playerNum, score: score }]);
-            
-        if (error) {
-            console.error("雲端數據同步失敗:", error);
-        } else {
-            console.log("數據成功極速同步雲端！");
-        }
+        try {
+            const { error } = await supabaseClient
+                .from('math_scores')
+                .insert([{ class: playerClass, student_num: playerNum, score: score }]);
+                
+            if (error) {
+                console.error("雲端上傳失敗:", error);
+            } else {
+                console.log("成績已同步至雲端！");
+            }
+        } catch(e) { console.error(e); }
     }
 
-    // 🌟【雲端讀取排行】：獲取最新排行榜並比對出當前學生的正確排名
+    // 🌟【雲端讀取】：載入全校排行並精確算出學生的即時名次
     async function fetchCloudLeaderboard() {
-        const { data: scores, error } = await supabaseClient
-            .from('math_scores')
-            .select('*')
-            .order('score', { ascending: false });
-            
-        if (error || !scores) {
-            console.error("雲端數據載入失敗:", error);
-            return;
-        }
+        try {
+            const { data: scores, error } = await supabaseClient
+                .from('math_scores')
+                .select('*')
+                .order('score', { ascending: false });
+                
+            if (error || !scores) {
+                console.error("雲端載入失敗:", error);
+                return;
+            }
 
-        // 依據玩家 ID 計算每個人的最佳歷史紀錄，防止同一人佔據多個排名
-        var uniqueLeaderboard = [];
-        var seenPlayers = {};
-        for(var i = 0; i < scores.length; i++) {
-            var playerKey = scores[i].class + "-" + scores[i].student_num;
-            if(!seenPlayers[playerKey]) {
-                seenPlayers[playerKey] = true;
-                uniqueLeaderboard.push(scores[i]);
+            var uniqueLeaderboard = [];
+            var seenPlayers = {};
+            for(var i = 0; i < scores.length; i++) {
+                var playerKey = scores[i].class + "-" + scores[i].student_num;
+                if(!seenPlayers[playerKey]) {
+                    seenPlayers[playerKey] = true;
+                    uniqueLeaderboard.push(scores[i]);
+                }
             }
-        }
-        
-        // 算出學生目前在全校的最新排名
-        var playerID = currentPlayer.class + "-" + currentPlayer.num;
-        var currentRank = -1;
-        for (var j = 0; j < uniqueLeaderboard.length; j++) {
-            if (uniqueLeaderboard[j].class === currentPlayer.class && uniqueLeaderboard[j].student_num === currentPlayer.num) {
-                currentRank = j + 1;
-                break;
+            
+            var currentRank = -1;
+            for (var j = 0; j < uniqueLeaderboard.length; j++) {
+                if (uniqueLeaderboard[j].class === currentPlayer.class && uniqueLeaderboard[j].student_num === currentPlayer.num) {
+                    currentRank = j + 1;
+                    break;
+                }
             }
-        }
-        
-        if (document.getElementById('currentRank')) {
-            document.getElementById('currentRank').innerText = currentRank > 0 ? currentRank : '-';
-        }
-        
-        // 渲染結算畫面的前十名排行榜 HTML Table
-        var html = '<table class="leaderboard-table">';
-        html += '<tr><th>排名</th><th>身分</th><th>最佳分數</th></tr>';
-        
-        for (var k = 0; k < Math.min(uniqueLeaderboard.length, 10); k++) {
-            var isSelf = (uniqueLeaderboard[k].class === currentPlayer.class && uniqueLeaderboard[k].student_num === currentPlayer.num);
-            var rowClass = isSelf ? 'highlight-row' : '';
-            var rank = k + 1;
-            var rankDisplay = rank;
-            if(rank === 1) rankDisplay = '🥇 1';
-            if(rank === 2) rankDisplay = '🥈 2';
-            if(rank === 3) rankDisplay = '🥉 3';
             
-            var identity = (uniqueLeaderboard[k].class === "教師") ? uniqueLeaderboard[k].student_num : (uniqueLeaderboard[k].class + "班 " + uniqueLeaderboard[k].student_num + "號");
+            if (document.getElementById('currentRank')) {
+                document.getElementById('currentRank').innerText = currentRank > 0 ? currentRank : '-';
+            }
             
-            html += '<tr class="' + rowClass + '">';
-            html += '<td>' + rankDisplay + '</td>';
-            html += '<td>' + identity + '</td>';
-            html += '<td style="color:var(--danger); font-weight:bold;">' + uniqueLeaderboard[k].score + '</td>';
-            html += '</tr>';
-        }
-        html += '</table>';
-        document.getElementById('leaderboardArea').innerHTML = html;
+            var html = '<table class="leaderboard-table">';
+            html += '<tr><th>排名</th><th>身分</th><th>最佳分數</th></tr>';
+            
+            for (var k = 0; k < Math.min(uniqueLeaderboard.length, 10); k++) {
+                var isSelf = (uniqueLeaderboard[k].class === currentPlayer.class && uniqueLeaderboard[k].student_num === currentPlayer.num);
+                var rowClass = isSelf ? 'highlight-row' : '';
+                var rank = k + 1;
+                var rankDisplay = rank;
+                if(rank === 1) rankDisplay = '🥇 1';
+                if(rank === 2) rankDisplay = '🥈 2';
+                if(rank === 3) rankDisplay = '🥉 3';
+                
+                var identity = (uniqueLeaderboard[k].class === "教師") ? uniqueLeaderboard[k].student_num : (uniqueLeaderboard[k].class + "班 " + uniqueLeaderboard[k].student_num + "號");
+                
+                html += '<tr class="' + rowClass + '">';
+                html += '<td>' + rankDisplay + '</td>';
+                html += '<td>' + identity + '</td>';
+                html += '<td style="color:var(--danger); font-weight:bold;">' + uniqueLeaderboard[k].score + '</td>';
+                html += '</tr>';
+            }
+            html += '</table>';
+            document.getElementById('leaderboardArea').innerHTML = html;
+        } catch (e) { console.error(e); }
     }
     
     async function endGame() {
         if(timerInterval) clearInterval(timerInterval);
         document.getElementById('finalScore').innerText = score;
         
-        // 先上傳，再更新顯示
         await uploadScoreToCloud();
         await fetchCloudLeaderboard();
         
